@@ -1,51 +1,45 @@
-import spacy  
-import re
+from clean_filename import clean_filename as clean
+from name_conventions import *
+import os
 
-nlp = spacy.load("en_core_web_md")
+def rename_files_in_directory(directory: str, convention: str):
+    for filename in os.listdir(directory):
+        base, ext = os.path.splitext(filename)
+        cleaned_base = clean(base)
+        new_name = apply_naming_convention(cleaned_base, convention) + ext
+        os.rename(os.path.join(directory, filename), os.path.join(directory, new_name))
+        print(f"\nRenamed '{filename}' to '{new_name}'")
+    
+def main():
+    directory = input("Enter the folder directory path: ")
+    conventions = {
+        "CamelCase": "camelcase",
+        "PascalCase": "pascalcase", 
+        "snake_case": "snake_case",
+        "kebab-case": "kebab-case",
+        "flatcase": "flatcase",
+        "UPPERFLATCASE": "upperflatcase",
+        "Pascal_Snake_Case": "pascal_snake_case",
+        "camel_Snake_Case": "camel_snake_case",
+        "SCREAMING_SNAKE_CASE": "screaming_snake_case",
+        "Train-Case": "train-case",
+        "COBOL-CASE": "cobol-case"
+    }
 
-def split_camel_case(text: str) -> str:
-    """
-    Splits camel case and snake case words into individual words.
-    """
-    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)  # Split camel case
-    text = re.sub(r'[_-]', ' ', text)  # Replace underscores and hyphens with spaces
-    return text
+    print("Choose a naming convention:")
+    convention_keys = list(conventions.keys())
+    for i, convention in enumerate(convention_keys, 1):
+        print(f"{i}. {convention}")
 
-def clean_filename(filename: str) -> str:
-    """
-    Cleans the filename by:
-    - Replacing non-alphanumeric characters (except underscores and hyphens) with spaces
-    - Standardizing spaces
-    """
-    cleaned = re.sub(r'[^a-zA-Z0-9_-]', ' ', filename)  # Keep only alphanumeric, underscores, and hyphens
-    cleaned = re.sub(r'[_-]+', ' ', cleaned)  # Replace multiple underscores/hyphens with a space
-    return cleaned.strip()
+    try:
+        choice = int(input("Enter the number of your choice: ")) - 1
+        if 0 <= choice < len(convention_keys):
+            selected_convention = conventions[convention_keys[choice]]
+            rename_files_in_directory(directory, selected_convention)
+        else:
+            print("Invalid choice.")
+    except ValueError:
+        print("Invalid input. Please enter a number.")
 
-def segment_filename(filename: str) -> str:
-    """
-    Uses spaCy to:
-    - Detect words in filenames without spaces
-    - Recognize named entities (if applicable)
-    - Preserve all meaningful words while removing unwanted junk
-    """
-    cleaned = clean_filename(filename)
-    split_cleaned = split_camel_case(cleaned)
-    doc = nlp(split_cleaned)
-
-    words = []
-    for token in doc:
-        if token.is_alpha or token.is_digit or token.ent_type_ or token.like_num:  
-            words.append(token.text)
-
-    return " ".join(words)  # Return cleaned filename with proper spacing
-
-# Test Cases
-filenames = [
-    "elonMusk2024Report_final",
-    "SpaceX_StarshipLaunch_v2",
-    "projectApollo11_MissionData",
-    "financial-report-2023$$$.pdf",
-]
-
-for fname in filenames:
-    print(f"Original: {fname} -> Processed: {segment_filename(fname)}\n")
+if __name__ == '__main__':
+    main()
